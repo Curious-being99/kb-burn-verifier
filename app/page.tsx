@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 const TOKEN_ID = "b75a6e90f569965bdeec23c460ebd59e0f0445d8aa8f5d4330fe15c66a47b4d8";
 const API_URL = `https://kascov.io/data/mainnet/token/${TOKEN_ID}`;
 
-type Token = { covenant_id?: string; name?: string; status?: string; supply?: number | string; minted?: number | string; burned?: number | string; fields?: Record<string, unknown>; invalid_reason?: string; };
-type TokenEvent = { txid?: string; token_kind?: string; amount?: number | string; accepting_daa?: number; };
+type Token = { covenant_id?: string; name?: string; status?: string; supply?: number | string; supply_str?: string; minted?: number | string; minted_str?: string; burned?: number | string; burned_str?: string; fields?: Record<string, unknown>; invalid_reason?: string; };
+type TokenEvent = { txid?: string; token_kind?: string; amount?: number | string; amount_str?: string; accepting_daa?: number; };
 type TokenPayload = { token?: Token; events?: TokenEvent[]; validation?: { checked?: number }; note?: string; tip_daa?: number; tip_at_ms?: number; };
 
 function formatRaw(value: number | string | undefined): string {
@@ -63,9 +63,9 @@ export default function Home() {
         {error ? <div className="notice">{error} No cached or invented figures are substituted. <button onClick={() => void load()}>Try again</button></div> : null}
         {!error && !loading && !verified ? <div className="notice">The indexer has not marked the complete token history as verified. Burn totals and supply are withheld. {token?.invalid_reason || ""}</div> : null}
         <div className="stats">
-          <article><span>CHAIN-REPORTED BURNED</span><strong>{loading ? "…" : verified ? formatRaw(token?.burned) : "Not verified"}</strong><small>Raw token units</small></article>
-          <article><span>CHAIN-REPORTED SUPPLY</span><strong>{loading ? "…" : verified ? formatRaw(token?.supply) : "Not verified"}</strong><small>Raw token units</small></article>
-          <article><span>TOTAL MINTED</span><strong>{loading ? "…" : verified ? formatRaw(token?.minted) : "Not verified"}</strong><small>Raw token units</small></article>
+          <article><span>CHAIN-REPORTED BURNED</span><strong>{loading ? "…" : verified ? formatRaw(token?.burned_str ?? token?.burned) : "Not verified"}</strong><small>Raw token units</small></article>
+          <article><span>CHAIN-REPORTED SUPPLY</span><strong>{loading ? "…" : verified ? formatRaw(token?.supply_str ?? token?.supply) : "Not verified"}</strong><small>Raw token units</small></article>
+          <article><span>TOTAL MINTED</span><strong>{loading ? "…" : verified ? formatRaw(token?.minted_str ?? token?.minted) : "Not verified"}</strong><small>Raw token units</small></article>
         </div>
         <div className="status-foot"><span>Validation: <b>{token?.status || (loading ? "checking" : "unavailable")}</b> · Events checked: <b>{payload?.validation?.checked ?? "—"}</b></span><span>Last checked: {checkedAt || "—"}</span></div>
       </section>
@@ -73,13 +73,13 @@ export default function Home() {
         <div className="section-heading"><div><span className="section-kicker">PUBLIC AUDIT TRAIL</span><h2>Burn transactions</h2></div><span className="count">{burns.length} indexed</span></div>
         {loading ? <p className="empty">Loading indexed token events…</p> : error ? <p className="empty">No transaction list is available while the source is unreachable.</p> : burns.length === 0 ? <p className="empty">No burn events were returned by the indexer for this token record.</p> : <div className="event-list">{burns.map((event, index) => {
           const tx = event.txid || "";
-          return <article className="event" key={tx || index}><div className="event-icon">↘</div><div className="event-main"><strong>Burn event</strong><small>{tx ? shortId(tx) : "Transaction ID not supplied by source"}</small><small>Accepted DAA: {event.accepting_daa ?? "—"}</small></div><div className="event-amount">{formatRaw(event.amount)}<small>raw units</small></div>{tx ? <a className="tx-link" href={`https://explorer.kaspa.org/txs/${encodeURIComponent(tx)}`} target="_blank" rel="noreferrer" aria-label="Open transaction in Kaspa Explorer">↗</a> : null}</article>;
+          return <article className="event" key={tx || index}><div className="event-icon">↘</div><div className="event-main"><strong>Burn event</strong><small>{tx ? shortId(tx) : "Transaction ID not supplied by source"}</small><small>Accepted DAA: {event.accepting_daa ?? "—"}</small></div><div className="event-amount">{formatRaw(event.amount_str ?? event.amount)}<small>raw units</small></div>{tx ? <a className="tx-link" href={`https://explorer.kaspa.org/txs/${encodeURIComponent(tx)}`} target="_blank" rel="noreferrer" aria-label="Open transaction in Kaspa Explorer">↗</a> : null}</article>;
         })}</div>}
       </section>
       <section className="identity">
         <span className="section-kicker">TOKEN IDENTITY</span><p className="mono">{TOKEN_ID}</p>
         <div className="identity-links"><a href={API_URL} target="_blank" rel="noreferrer">Open raw chain-indexed token record ↗</a><a href="https://kascov.io/guide" target="_blank" rel="noreferrer">Indexer API and validation methodology ↗</a></div>
-        <p className="disclaimer">Verification scope: Kascov documents that its verified verdict means every event in the token history matched a known KCC-20 rule, with state hash checks and supply conservation. This site displays that third-party verdict and the indexer’s classified burn events; it is not itself an independently operated Kaspa node and does not claim a separate replay. The source is public and can be queried directly using the token ID above. If the source record is unavailable, unvalidated, or mismatched, totals are not presented as verified.</p>
+        <p className="disclaimer">Verification scope: Kascov documents that its verified verdict means every event in the token history matched a known KCC-20 rule, with state hash checks and supply conservation. A custom SilverScript burn entrypoint may be outside the indexer’s known rules and therefore remain unvalidated until that program is independently reviewed and supported. This site displays the third-party verdict and indexed burn events; it is not itself an independently operated Kaspa node and does not claim a separate replay. Exact *_str fields are preferred to avoid JavaScript integer precision loss. If the source record is unavailable, unvalidated, or mismatched, totals are not presented as verified.</p>
         <p className="source-meta">Indexer tip DAA: {payload?.tip_daa ?? "—"} · Source timestamp: {timeLabel(payload?.tip_at_ms)}</p>
       </section>
       <footer><span>KB BURN VERIFIER</span><span>Independent project · Read-only · No custody</span></footer>
